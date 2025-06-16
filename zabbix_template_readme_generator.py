@@ -21,9 +21,10 @@ def extract_items(template):
     items = []
     for item in template.get('items', []):
         items.append({
-            'name': item.get('name'),
-            'key': item.get('key'),
+            'name': item.get('name', ''),
+            'key': item.get('key', ''),
             'type': item.get('type', ''),
+            'value_type': item.get('value_type', ''),
             'units': item.get('units', ''),
             'description': item.get('description', '')
         })
@@ -37,14 +38,14 @@ def extract_triggers(template):
     for item in template.get('items', []):
         for trigger in item.get('triggers', []):
             triggers.append({
-                'name': trigger.get('name'),
+                'name': trigger.get('name', ''),
                 'expression': trigger.get('expression', ''),
                 'priority': trigger.get('priority', ''),
                 'description': trigger.get('description', '')
             })
     for trig in template.get('triggers', []):
         triggers.append({
-            'name': trig.get('name'),
+            'name': trig.get('name', ''),
             'expression': trig.get('expression', ''),
             'priority': trig.get('priority', ''),
             'description': trig.get('description', '')
@@ -70,19 +71,22 @@ def main():
     templates = data.get('zabbix_export', {}).get('templates', [])
     md_output = ""
     for tpl in templates:
+        # Название шаблона
         md_output += f"# Template: {tpl.get('template', '')}\n\n"
-
+        # Описание шаблона
         description = tpl.get('description', '').strip()
         if description:
-            md_output += f"{description}\n\n"
+            md_output += f"{sanitize_description(description)}\n\n"
 
+        # Items
         items = extract_items(tpl)
         if items:
             md_output += "## Items\n\n"
-            headers = ["Name", "Key", "Type", "Units", "Description"]
-            rows = [[i['name'], i['key'], str(i['type']), i['units'], i['description']] for i in items]
+            headers = ["Name", "Key", "Type", "Value type", "Units", "Description"]
+            rows = [[i['name'], i['key'], str(i['type']), str(i['value_type']), i['units'], i['description']] for i in items]
             md_output += markdown_table(headers, rows) + "\n\n"
 
+        # Triggers
         triggers = extract_triggers(tpl)
         if triggers:
             md_output += "## Triggers\n\n"
@@ -90,6 +94,7 @@ def main():
             rows = [[t['name'], t['expression'], t['priority'], t['description']] for t in triggers]
             md_output += markdown_table(headers, rows) + "\n\n"
 
+        # Macros
         macros = extract_macros(tpl)
         if macros:
             md_output += "## Macros\n\n"
@@ -97,6 +102,7 @@ def main():
             rows = [[m.get('macro', ''), m.get('value', ''), m.get('description', '')] for m in macros]
             md_output += markdown_table(headers, rows) + "\n\n"
 
+        # LLD discovery rules
         discovery_rules = extract_discovery_rules(tpl)
         if discovery_rules:
             md_output += "## Discovery rules\n\n"
@@ -107,8 +113,18 @@ def main():
                 item_protos = dr.get('item_prototypes', [])
                 if item_protos:
                     md_output += f"### Item prototypes for discovery: {dr.get('name')}\n\n"
-                    headers = ["Name", "Key", "Type", "Units", "Description"]
-                    rows = [[ip.get('name', ''), ip.get('key', ''), str(ip.get('type', '')), ip.get('units', ''), ip.get('description', '')] for ip in item_protos]
+                    headers = ["Name", "Key", "Type", "Value type", "Units", "Description"]
+                    rows = [
+                        [
+                            ip.get('name', ''),
+                            ip.get('key', ''),
+                            str(ip.get('type', '')),
+                            str(ip.get('value_type', '')),
+                            ip.get('units', ''),
+                            ip.get('description', '')
+                        ]
+                        for ip in item_protos
+                    ]
                     md_output += markdown_table(headers, rows) + "\n\n"
                 trigger_protos = dr.get('trigger_prototypes', [])
                 if trigger_protos:
