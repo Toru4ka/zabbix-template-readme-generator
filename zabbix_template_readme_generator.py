@@ -72,6 +72,10 @@ def main():
     for tpl in templates:
         md_output += f"# Template: {tpl.get('template', '')}\n\n"
 
+        description = tpl.get('description', '').strip()
+        if description:
+            md_output += f"{description}\n\n"
+
         items = extract_items(tpl)
         if items:
             md_output += "## Items\n\n"
